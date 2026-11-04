@@ -93,3 +93,4 @@ If you installed a CPU-only PyTorch, install the CUDA build from https://pytorch
 ## Limits worth knowing
 Quick Draw has fixed categories, so the recogniser cannot name anything outside them. The cGAN produces low-resolution sketches, not photos. The sketch-match score is a rough edge-overlap measure, not a quality rating.
 "# sketch2reality" 
+"# sketch2reality" 
