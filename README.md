@@ -256,7 +256,7 @@ B.Tech Graduate | Computer Science Engineering
 
 - GitHub: https://github.com/naveen057
 - LinkedIn: https://linkedin.com/in/venkata-naveen-thura/
-- Portfolio: https://naveen057.ccbp.tech
+- Portfolio: https://portfilio81.ccbp.tech/
 
 ---
 
