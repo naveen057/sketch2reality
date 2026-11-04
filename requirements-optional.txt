@@ -1,0 +1,5 @@
+# Only needed for sketch -> realistic image (ENABLE_DIFFUSION=1) and BLIP captions (ENABLE_CAPTION=1)
+diffusers>=0.27
+transformers>=4.40
+accelerate>=0.28
+safetensors>=0.4

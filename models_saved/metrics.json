@@ -1,0 +1,14 @@
+{
+  "cnn": {
+    "val_acc": 0.9429,
+    "params": 393428,
+    "train_seconds": 149,
+    "epochs": 8
+  },
+  "vit": {
+    "val_acc": 0.9084,
+    "params": 806420,
+    "train_seconds": 966,
+    "epochs": 12
+  }
+}

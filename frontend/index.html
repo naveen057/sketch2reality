@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch2Reality</title>
+<style>
+  :root {
+    --bg: #dde4ec; --panel: #f6f8fb; --ink: #1c2230; --muted: #5d687b; --line: #c3ccd8;
+    --accent: #2447d4; --accent-ink: #fff; --teal: #0e8a78; --danger: #b3261e; --paper: #ffffff;
+    --grid: #e4e9f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151d; --panel: #1a202b; --ink: #e8ecf3; --muted: #93a0b5; --line: #2d3748;
+            --accent: #7b96ff; --accent-ink: #0d1330; --teal: #4fd1bc; --danger: #ff8a80; --paper: #fdfdfd; --grid: #e9edf3; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 56px; }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -0.03em; margin: 0 0 4px; line-height: 1.05; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .sheet { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--paper);
+           background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+           background-size: 24px 24px; }
+  canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; touch-action: none; cursor: crosshair; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+           color: var(--ink); padding: 7px 12px; }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  button:disabled { opacity: .55; cursor: wait; }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: .9rem; }
+  input[type=range] { width: 90px; accent-color: var(--accent); }
+  input[type=text] { flex: 1 1 200px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+                     background: var(--paper); color: #1c2230; }
+  .status { min-height: 1.4em; margin: 10px 0 0; font-size: .92rem; color: var(--muted); }
+  .status.error { color: var(--danger); }
+  .model { margin-bottom: 18px; }
+  .model h3 { font-size: .95rem; margin: 0 0 8px; }
+  .row { display: grid; grid-template-columns: 96px 1fr 48px; gap: 10px; align-items: center; margin: 5px 0; font-size: .92rem; }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; transition: width .25s ease; }
+  .cnn .bar > i { background: var(--accent); } .vit .bar > i { background: var(--teal); }
+  .pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .empty { color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .compare { margin-top: 20px; display: none; }
+  .compare.show { display: block; }
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 760px) { .trio { grid-template-columns: 1fr; } }
+  .trio figure { margin: 0; }
+  .trio img { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+  figcaption { font-size: .88rem; color: var(--muted); margin-top: 6px; }
+  dl { margin: 0; } dt { color: var(--muted); font-size: .85rem; margin-top: 10px; } dd { margin: 2px 0 0; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sketch2Reality</h1>
+  <p class="sub">Draw something simple. Two models guess what it is, then a generator turns your sketch into a picture you can compare side by side.</p>
+
+  <div class="layout">
+    <section class="panel" aria-label="Drawing canvas">
+      <div class="sheet"><canvas id="canvas" width="560" height="560" aria-label="Drawing area"></canvas></div>
+      <div class="tools">
+        <button id="pen" aria-pressed="true">Pen</button>
+        <button id="eraser" aria-pressed="false">Eraser</button>
+        <label class="inline">Size <input id="size" type="range" min="6" max="40" value="16"></label>
+        <button id="undo">Undo</button>
+        <button id="clear">Clear</button>
+      </div>
+      <div class="tools">
+        <button id="recognize" class="primary">Recognize</button>
+        <label class="inline"><input id="auto" type="checkbox" checked> Recognize as I draw</label>
+      </div>
+      <div class="tools">
+        <input id="prompt" type="text" placeholder="Optional: describe the picture you want" aria-label="Generation prompt">
+        <button id="generate" class="primary">Generate image</button>
+      </div>
+      <p id="status" class="status" role="status"></p>
+    </section>
+
+    <section class="panel" aria-label="Results">
+      <h2>What the models think</h2>
+      <div id="preds"><p class="empty">Draw on the canvas to see predictions.</p></div>
+      <h2 style="margin-top:20px">Model comparison</h2>
+      <div id="metrics"><p class="empty">Train the models to see accuracy figures here.</p></div>
+    </section>
+  </div>
+
+  <section id="compare" class="panel compare" aria-label="Sketch and generated image">
+    <h2>Sketch vs generated image</h2>
+    <div class="trio">
+      <figure><img id="imgSketch" alt="Your sketch"><figcaption>Your sketch</figcaption></figure>
+      <figure><img id="imgGen" alt="Generated image"><figcaption id="genCap">Generated</figcaption></figure>
+      <dl>
+        <dt>Detected as</dt><dd id="dLabel"></dd>
+        <dt>Description</dt><dd id="dCaption"></dd>
+        <dt>Prompt</dt><dd id="dPrompt"></dd>
+        <dt>Sketch match</dt><dd id="dScore"></dd>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+let drawing = false, erasing = false, hasInk = false, topLabel = null, timer = null;
+const history = [];
+
+function resetCanvas() { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+resetCanvas();
+
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height];
+}
+function setStatus(msg, isError = false, busy = false) {
+  const s = $('status'); s.className = 'status' + (isError ? ' error' : '');
+  s.innerHTML = busy ? '<span class="spinner"></span>' : ''; s.append(msg);
+}
+function snapshot() { history.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); if (history.length > 30) history.shift(); }
+
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId); snapshot(); drawing = true;
+  const [x, y] = pos(e);
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.lineWidth = +$('size').value * (canvas.width / 560);
+  ctx.strokeStyle = erasing ? '#fff' : '#111'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 0.1, y + 0.1); ctx.stroke();
+  if (!erasing) hasInk = true;
+});
+canvas.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); });
+function endStroke() {
+  if (!drawing) return; drawing = false;
+  if ($('auto').checked && hasInk) { clearTimeout(timer); timer = setTimeout(recognize, 250); }
+}
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', endStroke);
+
+$('pen').onclick = () => setTool(false); $('eraser').onclick = () => setTool(true);
+function setTool(er) { erasing = er; $('pen').setAttribute('aria-pressed', !er); $('eraser').setAttribute('aria-pressed', er); }
+$('undo').onclick = () => { const s = history.pop(); if (s) ctx.putImageData(s, 0, 0); };
+$('clear').onclick = () => { snapshot(); resetCanvas(); hasInk = false; topLabel = null;
+  $('preds').innerHTML = '<p class="empty">Draw on the canvas to see predictions.</p>'; setStatus(''); };
+
+async function api(path, body) {
+  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+  return data;
+}
+
+async function recognize() {
+  if (!hasInk) { setStatus('Draw something first.', true); return; }
+  try {
+    const { predictions } = await api('/api/recognize', { image: canvas.toDataURL('image/png') });
+    renderPreds(predictions); setStatus('');
+  } catch (err) { setStatus(err.message, true); }
+}
+$('recognize').onclick = recognize;
+
+function renderPreds(p) {
+  const names = { cnn: 'CNN', vit: 'Vision Transformer' };
+  $('preds').innerHTML = '';
+  for (const [key, list] of Object.entries(p)) {
+    const box = document.createElement('div'); box.className = 'model ' + key;
+    box.innerHTML = `<h3>${names[key] || key}</h3>` + list.map(r =>
+      `<div class="row"><span>${r.label}</span><span class="bar"><i style="width:${(r.confidence * 100).toFixed(1)}%"></i></span>` +
+      `<span class="pct">${(r.confidence * 100).toFixed(0)}%</span></div>`).join('');
+    $('preds').append(box);
+  }
+  topLabel = (p.cnn || p.vit)[0].label;
+}
+
+$('generate').onclick = async () => {
+  if (!hasInk) { setStatus('Draw something first.', true); return; }
+  const btn = $('generate'); btn.disabled = true;
+  setStatus('Generating. Diffusion on a CPU can take a few minutes.', false, true);
+  try {
+    const sketch = canvas.toDataURL('image/png');
+    const r = await api('/api/generate', { image: sketch, label: topLabel, prompt: $('prompt').value });
+    $('imgSketch').src = sketch; $('imgGen').src = r.image;
+    $('genCap').textContent = r.mode === 'diffusion' ? 'Generated with Stable Diffusion + ControlNet' : 'Generated by the conditional GAN';
+    $('dLabel').textContent = r.label; $('dCaption').textContent = r.caption; $('dPrompt').textContent = r.prompt;
+    $('dScore').textContent = r.structure_score == null ? 'Not available for GAN output' : r.structure_score + ' / 100';
+    $('compare').classList.add('show'); $('compare').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setStatus('');
+  } catch (err) { setStatus(err.message, true); }
+  finally { btn.disabled = false; }
+};
+
+async function loadMetrics() {
+  try {
+    const m = await (await fetch('/api/metrics')).json();
+    if (!Object.keys(m).length) return;
+    $('metrics').innerHTML = '<table><tr><th>Model</th><th>Val accuracy</th><th>Parameters</th><th>Train time</th></tr>' +
+      Object.entries(m).map(([k, v]) => `<tr><td>${k.toUpperCase()}</td><td>${(v.val_acc * 100).toFixed(1)}%</td>` +
+        `<td>${v.params.toLocaleString()}</td><td>${v.train_seconds}s</td></tr>`).join('') + '</table>';
+  } catch (e) { /* metrics are optional */ }
+}
+loadMetrics();
+</script>
+</body>
+</html>
