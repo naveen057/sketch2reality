@@ -250,7 +250,7 @@ Through this project, I explored:
 
 ## 👨‍💻 Author
 
-**Naveen Venkata Thura**
+**Thura Venkata Naveen**
 
 B.Tech Graduate | Computer Science Engineering
 
